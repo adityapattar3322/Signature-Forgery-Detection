@@ -7,3 +7,4 @@ This project leverages image processing and supervised learning techniques to de
 - Modeling Techniques: Implements Support Vector Machine (SVM) and Random Forest classifiers.
 - Evaluation: Includes accuracy scores, classification reports, and confusion matrices for performance benchmarking.
 - Visualization: Uses matplotlib and seaborn for insightful data plots.
+
