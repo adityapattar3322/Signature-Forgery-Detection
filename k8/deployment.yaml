@@ -21,6 +21,23 @@ spec:
         imagePullPolicy: Always
         ports:
         - containerPort: 8501
+        env:
+        - name: DB_HOST
+          value: "mysql-service"
+        - name: DB_PORT
+          value: "3306"
+        - name: DB_NAME
+          value: "signature_app_db"
+        - name: DB_USER
+          valueFrom:
+            secretKeyRef:
+              name: mysql-secret
+              key: mysql-user
+        - name: DB_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: mysql-secret
+              key: mysql-password
         resources:
           limits:
             memory: "512Mi"

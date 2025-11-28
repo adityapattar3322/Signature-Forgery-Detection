@@ -187,35 +187,6 @@ def extract_single_feature(image):
     hog_features = hog(image, orientations=9, pixels_per_cell=(8, 8),
                        cells_per_block=(2, 2), block_norm='L2-Hys')
     lbp = local_binary_pattern(image, P=24, R=8, method="uniform")
-    (lbp_hist, _) = np.histogram(lbp.ravel(), bins=np.arange(0, 27), range=(0, 26))
-    lbp_hist = lbp_hist.astype("float")
-    lbp_hist /= (lbp_hist.sum() + 1e-7)
-    combined_features = np.hstack([hog_features, lbp_hist])
-    return combined_features.reshape(1, -1)
-
-# --- Database Logic ---
-def get_db_connection():
-    try:
-        db_config = st.secrets["database"]
-        conn = mysql.connector.connect(
-            host=db_config["host"],
-            user=db_config["user"],
-            password=db_config["password"],
-            database=db_config["db_name"],
-            port=db_config["port"]
-        )
-        return conn
-    except mysql.connector.Error as err:
-        st.error(f"Error connecting to database: {err}")
-        return None
-    except Exception as e:
-        st.error(f"Configuration Error: Please check your `.streamlit/secrets.toml` file. Details: {e}")
-        return None
-
-def hash_password(password):
-    return bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt())
-
-def verify_password(plain_password, hashed_password):
     if isinstance(hashed_password, str):
         hashed_password = hashed_password.encode('utf-8')
     return bcrypt.checkpw(plain_password.encode('utf-8'), hashed_password)
