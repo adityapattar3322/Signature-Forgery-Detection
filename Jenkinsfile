@@ -27,12 +27,12 @@ pipeline {
         stage('SonarQube Analysis') {
             steps {
                 script {
-                    // Assuming 'sonar-scanner' is in the PATH or configured as a tool.
-                    // If configured as a Global Tool in Jenkins, use: def scannerHome = tool 'SonarScanner'
-                    // and prepend ${scannerHome}/bin/ to the command.
-                    
+                    // Using Docker to run sonar-scanner since it might not be installed on the agent
+                    // Mounting the workspace to /usr/src which is the default workdir for this image
                     sh """
-                    sonar-scanner \
+                    docker run --rm \
+                        -v "${WORKSPACE}:/usr/src" \
+                        sonarsource/sonar-scanner-cli \
                         -Dsonar.projectKey=signature-forgery-detection \
                         -Dsonar.sources=. \
                         -Dsonar.host.url=${SONAR_URL} \
@@ -101,7 +101,8 @@ pipeline {
     
     post {
         always {
-            cleanWs()
+            // cleanWs() was not found, using deleteDir() to clean up the workspace
+            deleteDir()
         }
     }
 }
