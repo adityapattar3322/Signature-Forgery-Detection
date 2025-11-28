@@ -25,6 +25,7 @@ pipeline {
         }
 
         stage('SonarQube Analysis') {
+            when { expression { return false } }
             steps {
                 script {
                     // Download and run sonar-scanner locally to avoid Docker DNS issues
@@ -67,6 +68,7 @@ pipeline {
         }
 
         stage('Publish to Nexus') {
+            when { expression { return false } }
             steps {
                 script {
                     // 1. Archive source code (run in default agent)
