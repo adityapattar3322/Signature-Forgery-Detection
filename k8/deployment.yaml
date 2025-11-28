@@ -1,0 +1,30 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: signature-forgery-app
+  labels:
+    app: signature-forgery-app
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: signature-forgery-app
+  template:
+    metadata:
+      labels:
+        app: signature-forgery-app
+    spec:
+      containers:
+      - name: signature-forgery-app
+        # Image path matches the Nexus configuration in Jenkinsfile
+        image: 192.168.20.250:8081/signature-forgery-repo/signature-forgery-app:latest
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 8501
+        resources:
+          limits:
+            memory: "512Mi"
+            cpu: "500m"
+          requests:
+            memory: "256Mi"
+            cpu: "250m"
