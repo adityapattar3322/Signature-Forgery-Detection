@@ -5,6 +5,7 @@ pipeline {
 apiVersion: v1
 kind: Pod
 spec:
+  hostNetwork: true
   hostAliases:
   - ip: "192.168.20.250"
     hostnames:
