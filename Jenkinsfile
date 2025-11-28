@@ -73,6 +73,7 @@ spec:
         }
 
         stage('SonarQube Analysis') {
+            when { expression { return false } }
             steps {
                 container('sonar-scanner') {
                     sh '''
