@@ -76,7 +76,7 @@ spec:
             when { expression { return false } }
             steps {
                 container('sonar-scanner') {
-                    sh '''
+                    sh """
                         echo "--- 🔍 Starting Code Analysis ---"
                         sonar-scanner \
                             -Dsonar.projectKey=signature-forgery-detection \
@@ -84,7 +84,7 @@ spec:
                             -Dsonar.login=${SONAR_USER} \
                             -Dsonar.password=${SONAR_PASS} \
                             -Dsonar.sources=.
-                    '''
+                    """
                 }
             }
         }
@@ -93,7 +93,7 @@ spec:
             steps {
                 container('dind') {
                     script {
-                        sh '''
+                        sh """
                             echo "--- 🐳 Waiting for Docker Daemon to be ready... ---"
                             while ! docker info > /dev/null 2>&1; do
                                 echo "Waiting for Docker daemon..."
@@ -105,7 +105,7 @@ spec:
                             docker build -t ${IMAGE_NAME}:${env.BUILD_ID} .
                             echo "--- ✅ Image Built ---"
                             docker image ls
-                        '''
+                        """
                     }
                 }
             }
@@ -123,7 +123,7 @@ spec:
         stage('Tag & Push Image') {
             steps {
                 container('dind') {
-                    sh '''
+                    sh """
                         echo "--- 🚀 Pushing Image to Nexus ---"
                         # Tag as NEXUS_HOST/NEXUS_REPO/IMAGE_NAME:BUILD_ID
                         # Note: Nexus Docker registry usually requires the port in the tag if it's not 80/443
@@ -150,7 +150,7 @@ spec:
                         
                         docker tag ${IMAGE_NAME}:${env.BUILD_ID} ${NEXUS_HOST}/${NEXUS_REPO}/${IMAGE_NAME}:latest
                         docker push ${NEXUS_HOST}/${NEXUS_REPO}/${IMAGE_NAME}:latest
-                    '''
+                    """
                 }
             }
         }
