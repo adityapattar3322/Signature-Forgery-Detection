@@ -36,6 +36,9 @@ pipeline {
                         mv sonar-scanner-${scannerVersion}-linux sonar-scanner
                         chmod +x sonar-scanner/bin/sonar-scanner
                         
+                        // Configure sonar-scanner to use the embedded JRE
+                        sed -i 's/use_embedded_jre=false/use_embedded_jre=true/g' sonar-scanner/conf/sonar-scanner.properties
+                        
                         ./sonar-scanner/bin/sonar-scanner \
                             -Dsonar.projectKey=signature-forgery-detection \
                             -Dsonar.sources=. \
@@ -60,20 +63,20 @@ pipeline {
         stage('Publish to Nexus') {
             steps {
                 script {
-                    // 1. Zip source code (run in default agent)
-                    // Ensure zip is installed or use python/jar fallback if needed, but assuming zip exists for now
-                    sh "zip -r ${IMAGE_NAME}-${env.BUILD_ID}-source.zip . -x '*.git*' 'venv*'"
+                    // 1. Archive source code (run in default agent)
+                    // 'zip' was not found, using 'tar' instead which is standard
+                    sh "tar -czf ${IMAGE_NAME}-${env.BUILD_ID}-source.tar.gz --exclude='.git' --exclude='venv' ."
 
                     // 2. Save Docker image to a tar file (run in dind)
                     container('dind') {
                         sh "docker save -o ${IMAGE_NAME}-${env.BUILD_ID}.tar ${IMAGE_NAME}:${env.BUILD_ID}"
                     }
                     
-                    // 3. Upload Source Zip to Nexus (run in default agent)
+                    // 3. Upload Source Archive to Nexus (run in default agent)
                     sh """
                     curl -v -u ${NEXUS_USER}:${NEXUS_PASS} \
-                        --upload-file ${IMAGE_NAME}-${env.BUILD_ID}-source.zip \
-                        ${NEXUS_URL}/repository/${NEXUS_REPO}/${IMAGE_NAME}/${env.BUILD_ID}/${IMAGE_NAME}-${env.BUILD_ID}-source.zip
+                        --upload-file ${IMAGE_NAME}-${env.BUILD_ID}-source.tar.gz \
+                        ${NEXUS_URL}/repository/${NEXUS_REPO}/${IMAGE_NAME}/${env.BUILD_ID}/${IMAGE_NAME}-${env.BUILD_ID}-source.tar.gz
                     """
 
                     // 4. Upload Docker Image Tar to Nexus (run in default agent)
