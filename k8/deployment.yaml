@@ -17,7 +17,7 @@ spec:
       containers:
       - name: signature-forgery-app
         # Image path matches the Nexus configuration in Jenkinsfile
-        image: 192.168.20.250:8081/signature-forgery-repo/signature-forgery-app:latest
+        image: nexus.imcc.com:8081/signature-forgery-repo/signature-forgery-app:latest
         imagePullPolicy: Always
         ports:
         - containerPort: 8501

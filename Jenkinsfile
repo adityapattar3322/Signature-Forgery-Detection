@@ -5,6 +5,12 @@ pipeline {
 apiVersion: v1
 kind: Pod
 spec:
+  hostAliases:
+  - ip: "192.168.20.250"
+    hostnames:
+    - "sonarqube.imcc.com"
+    - "nexus.imcc.com"
+    - "jenkins.imcc.com"
   containers:
   - name: sonar-scanner
     image: sonarsource/sonar-scanner-cli
@@ -49,17 +55,17 @@ spec:
     
     environment {
         // SonarQube Configuration
-        SONAR_URL = 'http://192.168.20.250:9000'
+        SONAR_URL = 'http://sonarqube.imcc.com:9000'
         SONAR_USER = 'student'
         SONAR_PASS = 'Imccstudent@2025'
         
         // Nexus Configuration
-        NEXUS_HOST = '192.168.20.250:8081'
+        NEXUS_HOST = 'nexus.imcc.com:8081'
         NEXUS_USER = 'student'
         NEXUS_PASS = 'Imcc@2025'
         
         // Image Configuration
-        // Matches deployment.yaml: 192.168.20.250:8081/signature-forgery-repo/signature-forgery-app
+        // Matches deployment.yaml: nexus.imcc.com:8081/signature-forgery-repo/signature-forgery-app
         NEXUS_REPO = 'signature-forgery-repo' 
         IMAGE_NAME = 'signature-forgery-app'
         FULL_IMAGE_NAME = "${NEXUS_HOST}/${NEXUS_REPO}/${IMAGE_NAME}"
