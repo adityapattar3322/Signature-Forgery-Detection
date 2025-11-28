@@ -74,16 +74,18 @@ spec:
 
         stage('SonarQube Analysis') {
             steps {
-                container('sonar-scanner') {
-                    sh """
-                        echo "--- 🔍 Starting Code Analysis ---"
-                        sonar-scanner \
-                            -Dsonar.projectKey=signature-forgery-detection \
-                            -Dsonar.host.url=${SONAR_URL} \
-                            -Dsonar.login=${SONAR_USER} \
-                            -Dsonar.password=${SONAR_PASS} \
-                            -Dsonar.sources=.
-                    """
+                catchError(buildResult: 'UNSTABLE', stageResult: 'FAILURE') {
+                    container('sonar-scanner') {
+                        sh """
+                            echo "--- 🔍 Starting Code Analysis ---"
+                            sonar-scanner \
+                                -Dsonar.projectKey=signature-forgery-detection \
+                                -Dsonar.host.url=${SONAR_URL} \
+                                -Dsonar.login=${SONAR_USER} \
+                                -Dsonar.password=${SONAR_PASS} \
+                                -Dsonar.sources=.
+                        """
+                    }
                 }
             }
         }
