@@ -116,19 +116,6 @@ spec:
                 }
             }
         }
-
-        stage('Push to Nexus') {
-            steps {
-                container('dind') {
-                    script {
-                        sh """
-                            echo "--- � Logging into Nexus ---"
-                            docker login ${NEXUS_HOST} -u ${NEXUS_USER} -p ${NEXUS_PASS}
-                            
-                            echo "--- 🚀 Pushing Image ---"
-                            docker push ${FULL_IMAGE_NAME}:${env.BUILD_ID}
-                            docker push ${FULL_IMAGE_NAME}:latest
-                        """
                     }
                 }
             }
