@@ -26,27 +26,31 @@ pipeline {
 
         stage('SonarQube Analysis') {
             steps {
-                script {
-                    // Using Docker to run sonar-scanner since it might not be installed on the agent
-                    // Mounting the workspace to /usr/src which is the default workdir for this image
-                    sh """
-                    docker run --rm \
-                        -v "${WORKSPACE}:/usr/src" \
-                        sonarsource/sonar-scanner-cli \
-                        -Dsonar.projectKey=signature-forgery-detection \
-                        -Dsonar.sources=. \
-                        -Dsonar.host.url=${SONAR_URL} \
-                        -Dsonar.login=${SONAR_USER} \
-                        -Dsonar.password=${SONAR_PASS}
-                    """
+                container('dind') {
+                    script {
+                        // Using Docker to run sonar-scanner since it might not be installed on the agent
+                        // Mounting the workspace to /usr/src which is the default workdir for this image
+                        sh """
+                        docker run --rm \
+                            -v "${WORKSPACE}:/usr/src" \
+                            sonarsource/sonar-scanner-cli \
+                            -Dsonar.projectKey=signature-forgery-detection \
+                            -Dsonar.sources=. \
+                            -Dsonar.host.url=${SONAR_URL} \
+                            -Dsonar.login=${SONAR_USER} \
+                            -Dsonar.password=${SONAR_PASS}
+                        """
+                    }
                 }
             }
         }
 
         stage('Build Docker Image') {
             steps {
-                script {
-                    sh "docker build -t ${IMAGE_NAME}:${env.BUILD_ID} ."
+                container('dind') {
+                    script {
+                        sh "docker build -t ${IMAGE_NAME}:${env.BUILD_ID} ."
+                    }
                 }
             }
         }
@@ -58,7 +62,9 @@ pipeline {
                     sh "zip -r ${IMAGE_NAME}-${env.BUILD_ID}-source.zip . -x '*.git*' 'venv*'"
 
                     // 2. Save Docker image to a tar file
-                    sh "docker save -o ${IMAGE_NAME}-${env.BUILD_ID}.tar ${IMAGE_NAME}:${env.BUILD_ID}"
+                    container('dind') {
+                        sh "docker save -o ${IMAGE_NAME}-${env.BUILD_ID}.tar ${IMAGE_NAME}:${env.BUILD_ID}"
+                    }
                     
                     // 3. Upload Source Zip to Nexus
                     sh """
@@ -79,21 +85,23 @@ pipeline {
         
         stage('Deploy') {
             steps {
-                script {
-                    // Simple deployment: Stop old container and run new one
-                    try {
-                        sh "docker stop ${IMAGE_NAME} || true"
-                        sh "docker rm ${IMAGE_NAME} || true"
-                    } catch (Exception e) {
-                        echo "No existing container to stop."
+                container('dind') {
+                    script {
+                        // Simple deployment: Stop old container and run new one
+                        try {
+                            sh "docker stop ${IMAGE_NAME} || true"
+                            sh "docker rm ${IMAGE_NAME} || true"
+                        } catch (Exception e) {
+                            echo "No existing container to stop."
+                        }
+                        
+                        sh """
+                        docker run -d \
+                            --name ${IMAGE_NAME} \
+                            -p 8501:8501 \
+                            ${IMAGE_NAME}:${env.BUILD_ID}
+                        """
                     }
-                    
-                    sh """
-                    docker run -d \
-                        --name ${IMAGE_NAME} \
-                        -p 8501:8501 \
-                        ${IMAGE_NAME}:${env.BUILD_ID}
-                    """
                 }
             }
         }
