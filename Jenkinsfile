@@ -35,17 +35,13 @@ spec:
     image: docker:dind
     securityContext:
       privileged: true
+    args:
+    - --insecure-registry=nexus.imcc.com:8081
+    - --insecure-registry=192.168.20.250:8081
     env:
     - name: DOCKER_TLS_CERTDIR
       value: ""
-    volumeMounts:
-    - name: docker-config
-      mountPath: /etc/docker/daemon.json
-      subPath: daemon.json
   volumes:
-  - name: docker-config
-    configMap:
-      name: docker-daemon-config
   - name: kubeconfig-secret
     secret:
       secretName: kubeconfig-secret
