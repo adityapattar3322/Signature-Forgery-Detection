@@ -32,6 +32,7 @@ pipeline {
                         // Mounting the workspace to /usr/src which is the default workdir for this image
                         sh """
                         docker run --rm \
+                            --network host \
                             -v "${WORKSPACE}:/usr/src" \
                             sonarsource/sonar-scanner-cli \
                             -Dsonar.projectKey=signature-forgery-detection \
