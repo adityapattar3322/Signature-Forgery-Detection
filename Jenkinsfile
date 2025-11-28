@@ -1,6 +1,4 @@
 pipeline {
-    // 1. **CRITICAL FIX**: Replaced 'agent any' with the required Kubernetes agent definition
-    // This defines the Pod with dind, sonar-scanner, and kubectl containers.
     agent {
         kubernetes {
             yaml '''
@@ -59,10 +57,12 @@ spec:
         NEXUS_HOST = '192.168.20.250:8081'
         NEXUS_USER = 'student'
         NEXUS_PASS = 'Imcc@2025'
-        NEXUS_REPO = 'signature-forgery-repo' 
         
-        // Docker Image Name
+        // Image Configuration
+        // Matches deployment.yaml: 192.168.20.250:8081/signature-forgery-repo/signature-forgery-app
+        NEXUS_REPO = 'signature-forgery-repo' 
         IMAGE_NAME = 'signature-forgery-app'
+        FULL_IMAGE_NAME = "${NEXUS_HOST}/${NEXUS_REPO}/${IMAGE_NAME}"
     }
 
     stages {
@@ -73,7 +73,6 @@ spec:
         }
 
         stage('SonarQube Analysis') {
-            when { expression { return false } }
             steps {
                 container('sonar-scanner') {
                     sh """
@@ -94,88 +93,60 @@ spec:
                 container('dind') {
                     script {
                         sh """
-                            echo "--- 🐳 Waiting for Docker Daemon to be ready... ---"
+                            echo "--- 🐳 Waiting for Docker Daemon ---"
                             while ! docker info > /dev/null 2>&1; do
                                 echo "Waiting for Docker daemon..."
                                 sleep 1
                             done
-                            echo "--- 🐳 Docker is Ready! ---"
                             
                             echo "--- 🔨 Building Image ---"
-                            docker build -t ${IMAGE_NAME}:${env.BUILD_ID} .
+                            docker build -t ${FULL_IMAGE_NAME}:${env.BUILD_ID} .
+                            docker tag ${FULL_IMAGE_NAME}:${env.BUILD_ID} ${FULL_IMAGE_NAME}:latest
                             echo "--- ✅ Image Built ---"
-                            docker image ls
                         """
                     }
                 }
             }
         }
 
-        stage('Login to Docker Registry') {
-            when { expression { return false } }
+        stage('Push to Nexus') {
             steps {
                 container('dind') {
-                    // Use NEXUS_HOST for login
-                    sh "docker login ${NEXUS_HOST} -u ${NEXUS_USER} -p ${NEXUS_PASS}"
-                }
-            }
-        }
-        
-        stage('Tag & Push Image') {
-            when { expression { return false } }
-            steps {
-                container('dind') {
-                    sh """
-                        echo "--- 🚀 Pushing Image to Nexus ---"
-                        # Tag as NEXUS_HOST/NEXUS_REPO/IMAGE_NAME:BUILD_ID
-                        # Note: Nexus Docker registry usually requires the port in the tag if it's not 80/443
-                        # Assuming NEXUS_REPO is just a name, but for Docker push it might need to be part of the path or just the host.
-                        # Based on typical Nexus setup: host:port/repository-name/image:tag
-                        
-                        FULL_IMAGE_NAME="${NEXUS_HOST}/repository/${NEXUS_REPO}/${IMAGE_NAME}"
-                        
-                        # Adjusting for common Nexus Docker Connector patterns. 
-                        # If NEXUS_HOST includes the port (8081), it's likely the HTTP connector.
-                        # Usually Docker pushes go to a specific connector port (e.g. 8082 or 8083) OR the main port with /repository/repo-name/
-                        
-                        # Using the path format as per previous curl attempt which used /repository/${NEXUS_REPO}/...
-                        # But 'docker push' expects [registry_host[:port]/][repo_name/]image_name:tag
-                        
-                        # Let's try the format: NEXUS_HOST/IMAGE_NAME:TAG (if Nexus is at root)
-                        # OR NEXUS_HOST/repository/NEXUS_REPO/IMAGE_NAME:TAG
-                        
-                        # Reverting to the user's provided snippet logic but ensuring variables are correct.
-                        # The user's snippet used: ${NEXUS_HOST}/${NEXUS_REPO}/${IMAGE_NAME}:${env.BUILD_ID}
-                        
-                        docker tag ${IMAGE_NAME}:${env.BUILD_ID} ${NEXUS_HOST}/${NEXUS_REPO}/${IMAGE_NAME}:${env.BUILD_ID}
-                        docker push ${NEXUS_HOST}/${NEXUS_REPO}/${IMAGE_NAME}:${env.BUILD_ID}
-                        
-                        docker tag ${IMAGE_NAME}:${env.BUILD_ID} ${NEXUS_HOST}/${NEXUS_REPO}/${IMAGE_NAME}:latest
-                        docker push ${NEXUS_HOST}/${NEXUS_REPO}/${IMAGE_NAME}:latest
-                    """
+                    script {
+                        sh """
+                            echo "--- � Logging into Nexus ---"
+                            docker login ${NEXUS_HOST} -u ${NEXUS_USER} -p ${NEXUS_PASS}
+                            
+                            echo "--- 🚀 Pushing Image ---"
+                            docker push ${FULL_IMAGE_NAME}:${env.BUILD_ID}
+                            docker push ${FULL_IMAGE_NAME}:latest
+                        """
+                    }
                 }
             }
         }
         
         stage('Deploy to Kubernetes') {
-            when { expression { return false } }
             steps {
                 container('kubectl') {
                     script {
-                        sh '''
+                        sh """
                             echo "--- ☸ Deploying to Kubernetes ---"
                             
                             # Create namespace if it doesn't exist
                             kubectl create namespace signature-forgery || true
 
                             # Apply k8s manifests
-                            # Ensure k8/ directory exists in your repo with deployment.yaml and service.yaml
                             if [ -d "k8" ]; then
                                 kubectl apply -f k8/ -n signature-forgery
+                                
+                                echo "--- 🔄 Restarting Deployment to pick up new image ---"
+                                kubectl rollout restart deployment/signature-forgery-app -n signature-forgery
                             else
-                                echo "Warning: k8/ directory not found. Skipping deployment."
+                                echo "Error: k8/ directory not found!"
+                                exit 1
                             fi
-                        '''
+                        """
                     }
                 }
             }
