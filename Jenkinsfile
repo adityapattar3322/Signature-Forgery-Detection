@@ -26,22 +26,23 @@ pipeline {
 
         stage('SonarQube Analysis') {
             steps {
-                container('dind') {
-                    script {
-                        // Using Docker to run sonar-scanner since it might not be installed on the agent
-                        // Mounting the workspace to /usr/src which is the default workdir for this image
-                        sh """
-                        docker run --rm \
-                            --network host \
-                            -v "${WORKSPACE}:/usr/src" \
-                            sonarsource/sonar-scanner-cli \
+                script {
+                    // Download and run sonar-scanner locally to avoid Docker DNS issues
+                    // Using 'jar' to unzip if 'unzip' is not available (jar is always available in Jenkins agent)
+                    def scannerVersion = '5.0.1.3006'
+                    sh """
+                        curl -sSLo sonar-scanner.zip https://binaries.sonarsource.com/Distribution/sonar-scanner-cli/sonar-scanner-cli-${scannerVersion}-linux.zip
+                        unzip -o sonar-scanner.zip || jar xf sonar-scanner.zip
+                        mv sonar-scanner-${scannerVersion}-linux sonar-scanner
+                        chmod +x sonar-scanner/bin/sonar-scanner
+                        
+                        ./sonar-scanner/bin/sonar-scanner \
                             -Dsonar.projectKey=signature-forgery-detection \
                             -Dsonar.sources=. \
                             -Dsonar.host.url=${SONAR_URL} \
                             -Dsonar.login=${SONAR_USER} \
                             -Dsonar.password=${SONAR_PASS}
-                        """
-                    }
+                    """
                 }
             }
         }
@@ -59,22 +60,23 @@ pipeline {
         stage('Publish to Nexus') {
             steps {
                 script {
-                    // 1. Zip source code (optional, keeping it for completeness)
+                    // 1. Zip source code (run in default agent)
+                    // Ensure zip is installed or use python/jar fallback if needed, but assuming zip exists for now
                     sh "zip -r ${IMAGE_NAME}-${env.BUILD_ID}-source.zip . -x '*.git*' 'venv*'"
 
-                    // 2. Save Docker image to a tar file
+                    // 2. Save Docker image to a tar file (run in dind)
                     container('dind') {
                         sh "docker save -o ${IMAGE_NAME}-${env.BUILD_ID}.tar ${IMAGE_NAME}:${env.BUILD_ID}"
                     }
                     
-                    // 3. Upload Source Zip to Nexus
+                    // 3. Upload Source Zip to Nexus (run in default agent)
                     sh """
                     curl -v -u ${NEXUS_USER}:${NEXUS_PASS} \
                         --upload-file ${IMAGE_NAME}-${env.BUILD_ID}-source.zip \
                         ${NEXUS_URL}/repository/${NEXUS_REPO}/${IMAGE_NAME}/${env.BUILD_ID}/${IMAGE_NAME}-${env.BUILD_ID}-source.zip
                     """
 
-                    // 4. Upload Docker Image Tar to Nexus
+                    // 4. Upload Docker Image Tar to Nexus (run in default agent)
                     sh """
                     curl -v -u ${NEXUS_USER}:${NEXUS_PASS} \
                         --upload-file ${IMAGE_NAME}-${env.BUILD_ID}.tar \
