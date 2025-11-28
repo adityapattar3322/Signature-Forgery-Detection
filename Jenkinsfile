@@ -39,6 +39,9 @@ pipeline {
                         # Configure sonar-scanner to use the embedded JRE
                         sed -i 's/use_embedded_jre=false/use_embedded_jre=true/g' sonar-scanner/conf/sonar-scanner.properties
                         
+                        export JAVA_HOME=$(pwd)/sonar-scanner/jre
+                        export PATH=$JAVA_HOME/bin:$PATH
+
                         ./sonar-scanner/bin/sonar-scanner \
                             -Dsonar.projectKey=signature-forgery-detection \
                             -Dsonar.sources=. \
