@@ -112,6 +112,7 @@ spec:
         }
 
         stage('Login to Docker Registry') {
+            when { expression { return false } }
             steps {
                 container('dind') {
                     // Use NEXUS_HOST for login
@@ -121,6 +122,7 @@ spec:
         }
         
         stage('Tag & Push Image') {
+            when { expression { return false } }
             steps {
                 container('dind') {
                     sh """
@@ -156,6 +158,7 @@ spec:
         }
         
         stage('Deploy to Kubernetes') {
+            when { expression { return false } }
             steps {
                 container('kubectl') {
                     script {
