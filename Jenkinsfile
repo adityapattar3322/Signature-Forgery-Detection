@@ -36,7 +36,7 @@ pipeline {
                         mv sonar-scanner-${scannerVersion}-linux sonar-scanner
                         chmod +x sonar-scanner/bin/sonar-scanner
                         
-                        // Configure sonar-scanner to use the embedded JRE
+                        # Configure sonar-scanner to use the embedded JRE
                         sed -i 's/use_embedded_jre=false/use_embedded_jre=true/g' sonar-scanner/conf/sonar-scanner.properties
                         
                         ./sonar-scanner/bin/sonar-scanner \
