@@ -3,12 +3,12 @@ pipeline {
 
     environment {
         // SonarQube Configuration
-        SONAR_URL = 'http://sonarqube.imcc.com/'
+        SONAR_URL = 'http://192.168.17.68:9000/'
         SONAR_USER = 'student'
         SONAR_PASS = 'Imccstudent@2025'
         
         // Nexus Configuration
-        NEXUS_URL = 'http://nexus.imcc.com/'
+        NEXUS_URL = 'http://192.168.17.68:8081/'
         NEXUS_USER = 'student'
         NEXUS_PASS = 'Imcc@2025'
         NEXUS_REPO = 'signature-forgery-repo' // Change this to your actual repository name
